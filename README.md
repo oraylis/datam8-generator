@@ -8,8 +8,6 @@
   - manages dependencies including build tools
   - manages different python versions
 
-
-
 ### execute dm8gen
 ``` sh
 uv run dm8gen <args>
@@ -28,7 +26,15 @@ Testing requires that a path to a datam8 solution is provided. Alternatively
 can be provided via environment vartiables, see `tests/README.md`.
 
 ``` sh
-uv run test --solution-path <path>
+uv run pytest --solution-path <path>
+```
+
+### linting
+``` sh
+uvx ruff check src
+
+# shorthand for
+uv tool run ruff check src
 ```
 
 
