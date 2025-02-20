@@ -11,4 +11,3 @@ wheels/
 
 # environment variable files
 .envrc
-datamodel_schema/**
