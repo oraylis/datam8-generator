@@ -40,7 +40,7 @@ build-backend = "hatchling.build"
 
 [tool.ruff]
 exclude = [
-  "src/dm8gen/Generated",
+  # "src/dm8gen/Generated",
 ]
 line-length = 80
 
@@ -56,6 +56,12 @@ quote-style = "double"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dm8gen"]
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build_datamodel.py"
+dependencies = [
+  "datamodel-code-generator>=0.28.1",
+]
 
 ###############
 # tool.pytest #

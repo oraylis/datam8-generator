@@ -8,6 +8,20 @@
   - manages dependencies including build tools
   - manages different python versions
 
+### clone repo
+We are using a git submodule to pull in the json schema for generating some
+classes in the `src/dm8data/Generated` directory. In order to get a functioning
+local copy of this repo you need to also retrieve the submodule which is also
+a git repo.
+
+``` sh
+# clone a fresh local copy
+git clone --recurse-submodules https://github.com/oraylis/datam8-generator.git
+
+# initialize submodule in already existing repo
+git submodule update --init --recursive
+```
+
 ### execute dm8gen
 ``` sh
 uv run dm8gen <args>
