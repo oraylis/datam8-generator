@@ -1,0 +1,40 @@
+name: "Lint and Build (Reusable)"
+
+on:
+  workflow_call:
+
+jobs:
+  lint-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.1"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff lint check
+        run: uv tool run ruff check
+
+      - name: Build the application
+        run: uv build
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-artifacts
+          path: dist
