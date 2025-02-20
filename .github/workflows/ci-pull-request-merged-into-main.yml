@@ -1,0 +1,57 @@
+name: "Release on PR from Main"
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+jobs:
+  call-lint-build:
+    if: github.event.pull_request.merged == true
+    uses: ./.github/workflows/reusable-lint-build.yml
+
+  create-tag-and-release:
+    needs: call-lint-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating tags & releases
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensure full commit history for versioning
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-artifacts  # Matches the artifact name from the reusable workflow
+          path: dist
+
+      - name: Increment version
+        id: increment-version
+        uses: RichardInnocent/semantic-versioning-git@v0.0.2
+
+      - name: Print if version changed
+        if: steps.increment-version.outputs.previous-version != steps.increment-version.outputs.new-version
+        run: echo "The new version is now $new_version"
+        env:
+          new_version: ${{ steps.increment-version.outputs.new-version }}
+
+      - name: Create Git Tag
+        run: |
+          git config --global user.name "github-action"
+          git config --global user.email "github-actions@noreply.com"
+          git tag "${{ steps.increment-version.outputs.new-version }}"
+          git push origin "${{ steps.increment-version.outputs.new-version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "${{ steps.increment-version.outputs.new-version }}"
+          body: "Release: ${{ steps.increment-version.outputs.new-version }}"
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
