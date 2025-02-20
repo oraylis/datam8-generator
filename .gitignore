@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# environment variable files
+.envrc
+datamodel_schema/**
