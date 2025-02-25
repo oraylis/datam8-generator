@@ -10,7 +10,7 @@ on:
 jobs:
   call-lint-build:
     if: github.event.pull_request.merged == true
-    uses: ./.github/workflows/reusable-lint-build.yml
+    uses: ./.github/workflows/reusable-lint-build-test.yml
 
   create-tag-and-release:
     needs: call-lint-build

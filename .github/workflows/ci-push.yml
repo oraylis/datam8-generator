@@ -7,4 +7,4 @@ on:
 
 jobs:
   call-lint-build:
-    uses: ./.github/workflows/reusable-lint-build.yml
+    uses: ./.github/workflows/reusable-lint-build-test.yml
