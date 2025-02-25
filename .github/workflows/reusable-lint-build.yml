@@ -1,12 +1,11 @@
-name: "Lint and Build (Reusable)"
+name: "Lint, Build and Test (Reusable)"
 
 on:
   workflow_call:
 
 jobs:
-  lint-build:
+  linting:
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -21,14 +20,24 @@ jobs:
         with:
           python-version-file: .python-version
 
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Install ruff
-        run: pip install ruff
-
       - name: Run ruff lint check
-        run: uv tool run ruff check
+        run: uv tool run ruff check .
+
+  building:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.1"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
 
       - name: Build the application
         run: uv build
@@ -38,3 +47,32 @@ jobs:
         with:
           name: dist-artifacts
           path: dist
+
+  testing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check out solution respoitory
+        uses: actions/checkout@v4
+        with:
+          repository: oraylis/automation-sample-solution
+          token: ${{ secrets.DATAM8_SAMPLE_SOLUTION_PAT }}
+          path: automation-sample-solution
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.1"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Set solution environment variable
+        run: echo "DATAM8_SOLUTION_PATH=automation-sample-solution/" >> $GITHUB_ENV
+
+      - name: Run pytests
+        run: uv run pytest
