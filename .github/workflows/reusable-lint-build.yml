@@ -75,4 +75,17 @@ jobs:
         run: echo "DATAM8_SOLUTION_PATH=automation-sample-solution/" >> $GITHUB_ENV
 
       - name: Run pytests
-        run: uv run pytest
+        run: uv run pytest --junitxml=TEST-generator-pytest.xml
+
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        with:
+          name: Pytest Results
+          path: TEST-generator-pytest.xml
+          reporter: java-junit
+
+      - name: Upload Test Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: TEST-generator-pytest.xml
