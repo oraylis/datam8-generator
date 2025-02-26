@@ -6,3 +6,4 @@ on:
 jobs:
   call-lint-build-test:
     uses: ./.github/workflows/reusable-lint-build-test.yml
+    secrets: inherit

@@ -11,6 +11,7 @@ jobs:
   call-lint-build:
     if: github.event.pull_request.merged == true
     uses: ./.github/workflows/reusable-lint-build-test.yml
+    secrets: inherit
 
   create-tag-and-release:
     needs: call-lint-build
