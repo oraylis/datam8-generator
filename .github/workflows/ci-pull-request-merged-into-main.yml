@@ -30,28 +30,33 @@ jobs:
           name: dist-artifacts  # Matches the artifact name from the reusable workflow
           path: dist
 
-      - name: Increment version
-        id: increment-version
-        uses: RichardInnocent/semantic-versioning-git@v0.0.2
+      - name: Extract project version from pyproject.toml
+        run: echo "VERSION=v$(grep -oP '(?<=version = ")[^"]+' pyproject.toml)" >> $GITHUB_ENV
 
-      - name: Print if version changed
-        if: steps.increment-version.outputs.previous-version != steps.increment-version.outputs.new-version
-        run: echo "The new version is now $new_version"
-        env:
-          new_version: ${{ steps.increment-version.outputs.new-version }}
+      - name: Get latest tag version
+        run: echo "LATEST_TAG_VERSION=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
 
-      - name: Create Git Tag
+      - name: Generate commit log
+        if: env.VERSION != env.LATEST_TAG_VERSION
         run: |
-          git config --global user.name "github-action"
-          git config --global user.email "github-actions@noreply.com"
-          git tag "${{ steps.increment-version.outputs.new-version }}"
-          git push origin "${{ steps.increment-version.outputs.new-version }}"
+          REPO_URL="https://github.com/${{ github.repository }}"
+
+          # Fetch the latest commits
+          if git rev-parse "$LATEST_TAG_VERSION" >/dev/null 2>&1; then
+            LOG=$(git log "$LATEST_TAG_VERSION"..HEAD --pretty=format:"| [\`%h\`]($REPO_URL/commit/%H) | %s |" --reverse)
+          else
+            LOG=$(git log --pretty=format:"| [\`%h\`]($REPO_URL/commit/%H) | %s |" --reverse)
+          fi
+
+          printf "CHANGELOG<<EOF\n| Commit ID | Commit Message |\n|-----------|---------------|\n%s\nEOF\n" "$LOG" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
+        if: env.VERSION != env.LATEST_TAG_VERSION
         with:
-          tag_name: "${{ steps.increment-version.outputs.new-version }}"
-          body: "Release: ${{ steps.increment-version.outputs.new-version }}"
+          tag_name: ${{ env.VERSION }}
+          body: ${{ env.CHANGELOG }}
+          generate_release_notes: true
           files: |
             dist/*.whl
             dist/*.tar.gz
