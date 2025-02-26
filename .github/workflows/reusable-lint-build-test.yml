@@ -64,6 +64,7 @@ jobs:
 
       - name: Run pytests
         run: uv run pytest --junitxml=TEST-generator-pytest.xml
+        continue-on-error: true
 
       - name: Publish Test Results
         uses: dorny/test-reporter@v1
