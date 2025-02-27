@@ -49,10 +49,11 @@ class SolutionFilePathCases:
         "input",
         [
             # format: ("solution_file", "solution_folder")
-            (r"C:\test\test\solution_file.dm8s", r"C:\test\test"),
             ("/home/user/solution/solution_file.dm8s", "/home/user/solution"),
-            (r".\solution\solution_file.dm8s", r".\solution"),
             ("../solution/solution_file.dm8s", "../solution"),
+            # TODO: windows path as tests do not work under linux
+            # (r"C:\test\test\solution_file.dm8s", r"C:\test\test"),
+            # (r".\solution\solution_file.dm8s", r".\solution"),
         ],
     )
     def case_solution_folder_valid(self, input):
