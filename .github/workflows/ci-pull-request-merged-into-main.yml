@@ -1,4 +1,4 @@
-name: "Release on PR from Main"
+name: "Lint, Build, Test and Release on merged PR into Main"
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
       - closed
 
 jobs:
-  call-lint-build:
+  call-lint-build-test:
     if: github.event.pull_request.merged == true
     uses: ./.github/workflows/reusable-lint-build-test.yml
     secrets: inherit
@@ -16,7 +16,7 @@ jobs:
       upload_artifacts: true
 
   create-tag-and-release:
-    needs: call-lint-build
+    needs: call-lint-build-test
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Required for creating tags & releases

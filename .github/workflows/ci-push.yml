@@ -1,4 +1,4 @@
-name: "Run Lint and Build on Push (Non-Main Branches)"
+name: "Lint, Build and Test on Push (Non-Main Branches)"
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  call-lint-build:
+  call-lint-build-test:
     uses: ./.github/workflows/reusable-lint-build-test.yml
     secrets: inherit
     with:
