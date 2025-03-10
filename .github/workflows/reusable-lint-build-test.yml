@@ -53,6 +53,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.DATAM8_MODEL_PAT }}
 
       - name: Check out solution respoitory
         uses: actions/checkout@v4
