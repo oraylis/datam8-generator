@@ -30,6 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: true
+          token: ${{ secrets.DATAM8_MODEL_PAT }}
 
       - name: Set up environment
         uses: ./.github/actions/setup-environment
