@@ -2,6 +2,10 @@ name: "Lint, Build and Test (Reusable)"
 
 on:
   workflow_call:
+    inputs:
+      upload_artifacts:
+        type: boolean
+        required: true
 
 jobs:
   linting:
@@ -35,6 +39,7 @@ jobs:
         run: uv build
 
       - name: Upload Build Artifacts
+        if: ${{ inputs.upload_artifacts }}
         uses: actions/upload-artifact@v4
         with:
           name: dist-artifacts
