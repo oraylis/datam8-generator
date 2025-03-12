@@ -1,0 +1,91 @@
+name: "Lint, Build and Test (Reusable)"
+
+on:
+  workflow_call:
+    inputs:
+      upload_artifacts:
+        type: boolean
+        required: true
+
+jobs:
+  linting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up environment
+        uses: ./.github/actions/setup-environment
+        with:
+          uv_version: "0.6.1"
+          python_version_file: ".python-version"
+
+      - name: Run ruff lint check
+        run: uv tool run ruff check .
+
+  building:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.DATAM8_MODEL_PAT }}
+
+      - name: Set up environment
+        uses: ./.github/actions/setup-environment
+        with:
+          uv_version: "0.6.1"
+          python_version_file: ".python-version"
+
+      - name: Build the application
+        run: uv build
+
+      - name: Upload Build Artifacts
+        if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-artifacts
+          path: dist
+
+  testing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.DATAM8_MODEL_PAT }}
+
+      - name: Check out solution respoitory
+        uses: actions/checkout@v4
+        with:
+          repository: oraylis/automation-sample-solution
+          token: ${{ secrets.DATAM8_SAMPLE_SOLUTION_PAT }}
+          path: automation-sample-solution
+
+      - name: Set up environment
+        uses: ./.github/actions/setup-environment
+        with:
+          uv_version: "0.6.1"
+          python_version_file: ".python-version"
+
+      - name: Set solution environment variable
+        run: echo "DATAM8_SOLUTION_PATH=automation-sample-solution/" >> $GITHUB_ENV
+
+      - name: Run pytests
+        run: uv run pytest --junitxml=TEST-generator-pytest.xml
+        continue-on-error: true
+
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        with:
+          name: Pytest Results
+          path: TEST-generator-pytest.xml
+          reporter: java-junit
+
+      - name: Upload Test Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: TEST-generator-pytest.xml
