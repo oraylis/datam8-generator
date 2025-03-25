@@ -1,6 +1,6 @@
 [project]
 name = "datam8-generator"
-version = "0.1.2"
+version = "1.0.0"
 description = "ORAYLIS DataM8 Generator"
 license = "GPL-3.0"
 requires-python = ">=3.11"
@@ -10,7 +10,7 @@ authors = [
 ]
 dependencies = [
     "autopep8==2.3.1",
-    "Jinja2==3.1.5",
+    "Jinja2==3.1.6",
     "jsonschema==4.23.0",
     "pydantic==2.8.2",
     "sqlparse==0.5.1",

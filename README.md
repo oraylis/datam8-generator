@@ -1,16 +1,30 @@
 # ORAYLIS DataM8 Generator
+This repository contains the generator used by DataM8 to generate the solution
+output. It can also be used as a standalone cli in ci/cd processes.
 
-## local development
+## Issues
+Issues are centrally maintained in a different repository
 
-### requirements
+https://github.com/oraylis/datam8
+
+## Documentation
+The DataM8 documentation is also centrally stored at the following place
+
+https://github.com/oraylis/datam8/tree/main/docs
+
+The specific Generator documentation is located [here](https://github.com/oraylis/datam8/tree/main/docs/generator).
+
+## Local development
+
+### Requirements
 - `uv` a project manager for python
   - https://docs.astral.sh/uv/getting-started/installation/
   - manages dependencies including build tools
   - manages different python versions
 
-### clone repo
+### Clone repo
 We are using a git submodule to pull in the json schema for generating some
-classes in the `src/dm8data/Generated` directory. In order to get a functioning
+classes in the `src/dm8gen/Generated` directory. In order to get a functioning
 local copy of this repo you need to also retrieve the submodule which is also
 a git repo.
 
@@ -22,20 +36,20 @@ git clone --recurse-submodules https://github.com/oraylis/datam8-generator.git
 git submodule update --init --recursive
 ```
 
-### execute dm8gen
+### Execute dm8gen
 ``` sh
 uv run dm8gen <args>
 
 # e.g.
-uv run dm8gen -h
+uv run dm8gen --help
 ```
 
-### build
+### Build
 ``` sh
 uv build
 ```
 
-### testing
+### Testing
 Testing requires that a path to a datam8 solution is provided. Alternatively
 can be provided via environment vartiables, see `tests/README.md`.
 
@@ -43,21 +57,13 @@ can be provided via environment vartiables, see `tests/README.md`.
 uv run pytest --solution-path <path>
 ```
 
-### linting
+### Linting
 ``` sh
 uvx ruff check src
 
 # shorthand for
 uv tool run ruff check src
 ```
-
-
-
-
-
-
-# DANGER ZONE: old readme content
-
 
 ## Local execution
 When running the generator directly from the repository, e.g. for testing
@@ -68,7 +74,7 @@ In order to run it, it needs to be recognized by the python interpreter as a
 module. To do this run the following from the repository root:
 
 ```sh
-python -m src.dm8data -a refresh_generate # and further options
+uv run dm8gen -a refresh_generate # and further options
 ```
 
 ## Arguments
