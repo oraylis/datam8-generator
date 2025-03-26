@@ -9,12 +9,16 @@ logger = logging.getLogger(__name__)
 class DataSourceFactory:
     """Factory class for Data Sources."""
 
+    CACHE_MAPPING: dict = {}
+
     json: json = None
     source_object: object = None
     errors: list = []
     log_level: logging.log = None
 
-    def __init__(self, path: str, log_level: logging.log = logging.INFO) -> None:
+    def __init__(
+        self, path: str, log_level: logging.log = logging.INFO
+    ) -> None:
         """Initialize the DataSourceFactory.
 
         Args:
@@ -95,6 +99,11 @@ class DataSourceFactory:
         Returns:
             str: The target type of the data source.
         """
+        cache_key = "%s:%s" % (source_name, source_type)
+        if cache_key in DataSourceFactory.CACHE_MAPPING:
+            self.logger.debug("Cached mapping return for %s" % cache_key)
+            return DataSourceFactory.CACHE_MAPPING[cache_key]
+
         try:
             __source_item = self.get_datasource(source_name=source_name)
             __ls_target_type = [
@@ -113,6 +122,7 @@ class DataSourceFactory:
                     f"Invalid Mapping Datasource {source_name} from sourceType: {source_type} to targetType: {__ls_target_type}"
                 )
 
+            DataSourceFactory.CACHE_MAPPING[cache_key] = __target_type
             return __target_type
 
         except Exception as e:

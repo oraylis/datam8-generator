@@ -23,12 +23,19 @@ logger = logging.getLogger(__name__)
 
 
 class Model:
+    CACHE_DATA_SOURCE: dict = {}
+    CACHE_ATTRIBUTE_TYPES: dict = {}
+    CACHE_DATA_MODULE: dict = {}
+    CACHE_DATA_TYPES: dict = {}
+
     path_solution: str = None
     dict_solution: str = None
     errors: list = []
     log_level: logging.log = None
 
-    def __init__(self, path_solution: str, log_level: logging.log = logging.INFO):
+    def __init__(
+        self, path_solution: str, log_level: logging.log = logging.INFO
+    ):
         self.log_level = log_level
         self.logger: logging.Logger = Helper.start_logger(
             self.__class__.__name__, log_level=log_level
@@ -69,7 +76,9 @@ class Model:
     @property
     def path_stage(self) -> str:
         try:
-            stage_path = self.__get_dict_path(dict_item=self.solution.stagingPath)
+            stage_path = self.__get_dict_path(
+                dict_item=self.solution.stagingPath
+            )
             # self.logger.info(f'Requested raw path: {stage_path}')
             return stage_path
         except Exception as e:
@@ -94,7 +103,9 @@ class Model:
     @property
     def path_generate(self) -> str:
         try:
-            generate_path = self.__get_dict_path(dict_item=self.solution.generatePath)
+            generate_path = self.__get_dict_path(
+                dict_item=self.solution.generatePath
+            )
             # self.logger.info(f'Requested generate path: {generate_path}')
             return generate_path
         except Exception as e:
@@ -103,7 +114,9 @@ class Model:
     @property
     def path_output(self) -> str:
         try:
-            output_path = self.__get_dict_path(dict_item=self.solution.outputPath)
+            output_path = self.__get_dict_path(
+                dict_item=self.solution.outputPath
+            )
             # self.logger.info(f'Requested output path: {output_path}')
             return output_path
         except Exception as e:
@@ -111,56 +124,101 @@ class Model:
 
     @property
     def data_sources(self) -> DataSourceFactory:
-        try:
-            path_datasource: str = os.path.join(
-                self.__get_dict_path(self.path_base), "DataSources.json"
+        path_datasource: str = os.path.join(
+            self.__get_dict_path(self.path_base), "DataSources.json"
+        )
+
+        if path_datasource in Model.CACHE_DATA_SOURCE:
+            self.logger.debug(
+                "Cached DataSourceFactory for %s" % path_datasource
             )
+            return Model.CACHE_DATA_SOURCE[path_datasource]
+
+        try:
             datasource_factory = DataSourceFactory(
                 path=path_datasource, log_level=self.log_level
             )
-            # self.logger.info('Successfully init Datasource Factory')
+            Model.CACHE_DATA_SOURCE[path_datasource] = datasource_factory
+            self.logger.info(
+                "Successfully init Datasource Factory from %s" % path_datasource
+            )
+
             return datasource_factory
         except Exception as e:
             self.__error_handler(e)
 
     @property
     def attribute_types(self) -> AttributeTypesFactory:
-        try:
-            path_attribute_types: str = os.path.join(
-                self.__get_dict_path(self.path_base), "AttributeTypes.json"
+        path_attribute_types: str = os.path.join(
+            self.__get_dict_path(self.path_base), "AttributeTypes.json"
+        )
+        if path_attribute_types in Model.CACHE_ATTRIBUTE_TYPES:
+            self.logger.debug(
+                "Cached AttributeTypesFactory for %s" % path_attribute_types
             )
+            return Model.CACHE_ATTRIBUTE_TYPES[path_attribute_types]
+
+        try:
             attribute_types_factory = AttributeTypesFactory(
                 path=path_attribute_types, log_level=self.log_level
             )
-            # self.logger.info('Successfully init Attribute Factory')
+            Model.CACHE_ATTRIBUTE_TYPES[path_attribute_types] = (
+                attribute_types_factory
+            )
+            self.logger.info(
+                "Successfully init Attribute Factory from %s"
+                % path_attribute_types
+            )
+
             return attribute_types_factory
         except Exception as e:
             self.__error_handler(e)
 
     @property
     def data_modules(self) -> DataModuleFactory:
-        try:
-            path_data_modules: str = os.path.join(
-                self.__get_dict_path(self.path_base), "DataModules.json"
+        path_data_modules: str = os.path.join(
+            self.__get_dict_path(self.path_base), "DataModules.json"
+        )
+        if path_data_modules in Model.CACHE_DATA_MODULE:
+            self.logger.debug(
+                "Cached DataModuleFactory for %s" % path_data_modules
             )
+            return Model.CACHE_DATA_MODULE[path_data_modules]
+
+        try:
             data_modules_factory = DataModuleFactory(
                 path=path_data_modules, log_level=self.log_level
             )
-            # self.logger.info('Successfully init Data Module Factory')
+            Model.CACHE_DATA_MODULE[path_data_modules] = data_modules_factory
+            self.logger.info(
+                "Successfully init Data Module Factory from %s"
+                % path_data_modules
+            )
+
             return data_modules_factory
         except Exception as e:
             self.__error_handler(e)
 
     @property
     def data_types(self) -> DataTypesFactory:
-        try:
-            path_data_types: str = os.path.join(
-                self.__get_dict_path(self.path_base), "DataTypes.json"
+        path_data_types: str = os.path.join(
+            self.__get_dict_path(self.path_base), "DataTypes.json"
+        )
+        if path_data_types in Model.CACHE_DATA_TYPES:
+            self.logger.debug(
+                "Cached DataTypesFactory for %s" % path_data_types
             )
+            return Model.CACHE_DATA_TYPES[path_data_types]
+
+        try:
             data_types_factory = DataTypesFactory(
                 path=path_data_types, log_level=self.log_level
             )
-            # self.logger.info('Successfully init Data Types Factory')
+            Model.CACHE_DATA_TYPES[path_data_types] = data_types_factory
+            self.logger.info(
+                "Successfully init Data Types Factory from %s" % path_data_types
+            )
+
             return data_types_factory
         except Exception as e:
             self.__error_handler(e)
@@ -257,7 +315,8 @@ class Model:
         return ls_curated_entity
 
     def get_entity_list(
-        self, regex: str = r"^([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)"
+        self,
+        regex: str = r"^([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)",
     ) -> list[EntityFactory]:
         ls_entity = []
         for e in self.get_locator(regex=regex):
@@ -380,7 +439,9 @@ class Model:
                             }
                             e = Index.model_validate_json(json.dumps(entry))
                             getattr(__idx, f"{item[0]}").entry.append(e)
-                            self.logger.info(f"Adding file to index: {file_name}")
+                            self.logger.info(
+                                f"Adding file to index: {file_name}"
+                            )
                         else:
                             self.logger.info(
                                 f"Changed File locator already in index: {file_name}"
@@ -424,7 +485,9 @@ class Model:
                 curated: dict = self.__get_index_entry(self.path_curated)
 
                 if self.errors:
-                    raise Model.ModelParseException(inner_exceptions=self.errors)
+                    raise Model.ModelParseException(
+                        inner_exceptions=self.errors
+                    )
 
                 # Create Index
                 idx_dict: dict = {
@@ -452,7 +515,9 @@ class Model:
                 self.__check_index_duplicates(idx=idx_refreshed)
 
                 with open(self.path_index, "w", encoding="utf-8") as f:
-                    json.dump(idx_refreshed.to_dict(), f, ensure_ascii=False, indent=4)
+                    json.dump(
+                        idx_refreshed.to_dict(), f, ensure_ascii=False, indent=4
+                    )
 
                 self.logger.info("Index has been refreshed")
 
@@ -464,7 +529,8 @@ class Model:
             self.__error_handler(e)
 
     def get_locator(
-        self, regex: str = r"^([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)"
+        self,
+        regex: str = r"^([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)",
     ) -> list[Index]:
         if not re.search(r"^\/+.+\/.+\/.+\/.+$", re.escape(regex)):
             raise InvalidLocatorException(regex)
@@ -477,14 +543,18 @@ class Model:
                 locator = entry.locator
                 # if re.match(re.escape(regex.lower()), str(locator).lower()):
                 if regex.lower() == str(locator).lower():
-                    self.logger.debug(f"Matching regex locator added: {locator}")
+                    self.logger.debug(
+                        f"Matching regex locator added: {locator}"
+                    )
                     ls_locators.append(entry)
 
         if ls_locators is None or len(ls_locators) == 0:
             raise LocatorNotFoundException(regex)
 
         if len(ls_locators) != 1:
-            raise MultipleLocatorsFoundException("%s - %s" % (regex, str(ls_locators)))
+            raise MultipleLocatorsFoundException(
+                "%s - %s" % (regex, str(ls_locators))
+            )
 
         return ls_locators
 
@@ -578,11 +648,15 @@ class Model:
 
     def __perform_stage_checks(self) -> None:
         stage_entities: list = self.get_stage_entity_list()
-        self.logger.info("Stage Entities to process: %s" % str(len(stage_entities)))
+        self.logger.info(
+            "Stage Entities to process: %s" % str(len(stage_entities))
+        )
 
     def __perform_core_checks(self) -> None:
         core_entities: list = self.get_core_entity_list()
-        self.logger.info("Core Entities to process: %s" % str(len(core_entities)))
+        self.logger.info(
+            "Core Entities to process: %s" % str(len(core_entities))
+        )
 
         for entity in core_entities:
             table = entity.model_object.entity
@@ -601,7 +675,9 @@ class Model:
 
     def __perform_curated_checks(self) -> None:
         curated_entities: list = self.get_curated_entity_list()
-        self.logger.info("Curated Entities to process: %s" % str(len(curated_entities)))
+        self.logger.info(
+            "Curated Entities to process: %s" % str(len(curated_entities))
+        )
 
         for entity in curated_entities:
             table = entity.model_object.entity
@@ -615,7 +691,8 @@ class Model:
                     self.logger.debug("Source Entity Locator: %s" % source.dm8l)
                     core_entity = self.lookup_entity(source.dm8l)
                     self.logger.debug(
-                        "Source Entity: %s" % core_entity.model_object.entity.name
+                        "Source Entity: %s"
+                        % core_entity.model_object.entity.name
                     )
 
     class ModelParseException(Exception):
