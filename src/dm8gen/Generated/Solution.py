@@ -23,7 +23,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AreaTypes(BaseModel):
@@ -52,7 +52,7 @@ class Model(BaseModel):
     generatePath: str
     diagramPath: str
     outputPath: str
-    AreaTypes: AreaTypes
+    AreaTypes_1: AreaTypes = Field(..., alias='AreaTypes')
 
     def to_dict(self) -> dict:
         return self.model_dump(by_alias=True, exclude_unset=True, mode='json')
