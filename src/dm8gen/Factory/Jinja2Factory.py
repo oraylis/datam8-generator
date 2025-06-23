@@ -5,6 +5,7 @@ import sys
 import os
 import json
 import textwrap
+import importlib.util
 
 from .Model import Model
 from autopep8 import fix_code
@@ -16,8 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 class Jinja2Factory:
-    """Factory class for Jinja2 templates."""
+    """Factory class for Jinja2 templates with performance optimizations."""
 
+    # Class-level template environment cache to reuse across instances
+    _template_environments: dict = {}
+    _compiled_templates: dict = {}
+    
     errors: list = []
     logger: logging.Logger = None
     model: Model = None
@@ -35,7 +40,205 @@ class Jinja2Factory:
             self.__class__.__name__, log_level=self.log_level
         )
         self.model = model
-        self.logger.debug("Successfully init Jinja2Factory")
+        
+        # Instance-specific template context cache
+        self._context_cache = None
+        self._last_context_hash = None
+        
+        self.logger.debug("Successfully init Jinja2Factory with caching optimizations")
+
+    def _get_cached_template_environment(self, search_paths: list) -> jinja2.Environment:
+        """
+        Get or create a cached Jinja2 environment for the given search paths.
+        
+        Args:
+            search_paths (list): List of template search paths.
+            
+        Returns:
+            jinja2.Environment: Cached or new Jinja2 environment.
+        """
+        # Create a cache key from the search paths (convert all to strings first)
+        cache_key = "|".join(sorted(str(path) for path in search_paths))
+        
+        if cache_key not in self._template_environments:
+            self.logger.debug(f"Creating new template environment for paths: {search_paths}")
+            
+            # Create new environment with optimizations (ensure all paths are strings)
+            template_loader = jinja2.FileSystemLoader([str(path) for path in search_paths])
+            template_env = jinja2.Environment(
+                loader=template_loader,
+                # Enable template caching
+                cache_size=1000,  # Cache up to 1000 compiled templates
+                auto_reload=False,  # Disable auto-reload for performance
+                # Enable optimizations
+                optimized=True,
+                finalize=lambda x: x if x is not None else ""
+            )
+            
+            self._template_environments[cache_key] = template_env
+            self.logger.info(f"Created and cached template environment for {len(search_paths)} paths")
+        else:
+            self.logger.debug(f"Using cached template environment for paths: {search_paths}")
+            
+        return self._template_environments[cache_key]
+
+    def _get_optimized_template_context(self, path_modules: str = None, path_solution: str = None) -> dict:
+        """
+        Get optimized template context with caching.
+        
+        Args:
+            path_modules (str, optional): Path to modules.
+            path_solution (str, optional): Path to solution.
+            
+        Returns:
+            dict: Template context dictionary.
+        """
+        # Create a hash of the input parameters to detect changes
+        context_inputs = f"{path_modules}|{path_solution}|{id(self.model)}"
+        context_hash = hash(context_inputs)
+        
+        # Return cached context if inputs haven't changed
+        if self._context_cache is not None and self._last_context_hash == context_hash:
+            self.logger.debug("Using cached template context")
+            return self._context_cache
+        
+        self.logger.debug("Building new template context")
+        
+        # Build base context
+        cache = Cache()
+        dict_modules = {"cache": cache, "Hasher": Hasher}
+        dict_model = {"model": self.model}
+        
+        # Add solution data for template access
+        dict_solution = {
+            "solution": self.model.solution,
+            "raw_entities": self.model.get_raw_entity_list(),
+            "stage_entities": self.model.get_stage_entity_list(),
+            "core_entities": self.model.get_core_entity_list(),
+            "curated_entities": self.model.get_curated_entity_list(),
+            "data_sources": self.model.data_sources,
+            "attribute_types": self.model.attribute_types,
+            "data_modules": self.model.data_modules,
+            "data_types": self.model.data_types
+        }
+        
+        # Load additional modules if specified
+        if path_modules is not None:
+            dict_modules.update(self._load_template_modules(path_modules))
+        
+        # Combine all context dictionaries
+        context = dict_model | dict_modules | dict_solution
+        
+        # Cache the context and hash
+        self._context_cache = context
+        self._last_context_hash = context_hash
+        
+        self.logger.debug(f"Built template context with {len(context)} items")
+        return context
+
+    def _load_template_modules(self, path_modules: str) -> dict:
+        """
+        Load template modules with error handling and caching.
+        
+        Args:
+            path_modules (str): Path to modules directory or file.
+            
+        Returns:
+            dict: Dictionary of loaded modules.
+        """
+        modules_dict = {}
+        
+        try:
+            path_modules = os.path.abspath(path_modules)
+            
+            if os.path.isfile(path_modules):
+                # Single module file
+                modules_dict.update(self._load_single_module(path_modules))
+            elif os.path.isdir(path_modules):
+                # Directory of modules
+                for module_file in os.scandir(path_modules):
+                    if module_file.is_file() and module_file.path.endswith(".py"):
+                        modules_dict.update(self._load_single_module(module_file.path))
+            else:
+                self.logger.warning(f"Module path does not exist: {path_modules}")
+                
+        except Exception as e:
+            self.logger.error(f"Error loading template modules: {e}")
+            
+        return modules_dict
+
+    def _load_single_module(self, module_path: str) -> dict:
+        """
+        Load a single Python module for template use.
+        
+        Args:
+            module_path (str): Path to the Python module file.
+            
+        Returns:
+            dict: Dictionary from the module's get_dict_modules function.
+        """
+        try:
+            # Convert Path to string to avoid PosixPath vs str comparison issues
+            module_name = str(Path(module_path).stem)
+            
+            spec = importlib.util.spec_from_file_location(module_name, module_path)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+            
+            if hasattr(module, 'get_dict_modules'):
+                return module.get_dict_modules()
+            else:
+                self.logger.warning(f"Module {module_name} does not have get_dict_modules function")
+                return {}
+                
+        except Exception as e:
+            self.logger.error(f"Error loading module {module_path}: {e}")
+            return {}
+
+    def _optimize_file_operations(self, path_template_destination: str):
+        """
+        Optimize file operations by using efficient directory creation and cleanup.
+        
+        Args:
+            path_template_destination (str): Destination directory path.
+        """
+        try:
+            # Create destination directory if it doesn't exist
+            os.makedirs(path_template_destination, exist_ok=True)
+            
+            # Use more efficient file deletion - improved version of __delete_template
+            if os.path.exists(path_template_destination):
+                # Use faster directory walking
+                for root, dirs, files in os.walk(path_template_destination):
+                    # Remove all files
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        try:
+                            os.remove(file_path)
+                            self.logger.debug(f"Removed file: {file}")
+                        except OSError as e:
+                            self.logger.warning(f"Could not remove file {file_path}: {e}")
+                    
+                    # Remove empty directories (bottom-up)
+                    for dir_name in dirs:
+                        dir_path = os.path.join(root, dir_name)
+                        try:
+                            if not os.listdir(dir_path):  # Only remove if empty
+                                os.rmdir(dir_path)
+                                self.logger.debug(f"Removed empty directory: {dir_name}")
+                        except OSError:
+                            # Directory not empty or other error, ignore
+                            pass
+                        
+        except Exception as e:
+            self.logger.error(f"Error in file operations optimization: {e}")
+
+    @classmethod
+    def clear_template_cache(cls):
+        """Clear the template cache to free memory."""
+        cls._template_environments.clear()
+        cls._compiled_templates.clear()
 
     def get_errors(self) -> list:
         """Get errors.
@@ -299,52 +502,22 @@ class Jinja2Factory:
             if path_solution is not None:
                 ls_filesystemloader.append(Helper.get_parent_path(path_solution))
 
-            # FileSystemLoader and Environment to enable template inheritance
-            # templateLoader = jinja2.FileSystemLoader(searchpath=path_template_source)
-            templateLoader = jinja2.FileSystemLoader(ls_filesystemloader)
-            templateEnv = jinja2.Environment(loader=templateLoader)
+            # Use optimized template environment with caching
+            templateEnv = self._get_cached_template_environment(ls_filesystemloader)
             self.logger.info(
                 f"Start generating output from directory: {_path_template_source}"
             )
 
-            # Template Input Parameter
-            cache = Cache()
-            dict_modules: dict = {"cache": cache, "Hasher": Hasher}
-            dict_model: dict = {"model": self.model}
-            if path_modules is not None:
-                path_modules = os.path.abspath(path_modules)
-                if not os.path.isfile(path_modules):
-                    for module in os.scandir(path_modules):
-                        if module.is_file() and module.path.endswith(".py"):
-                            module_path = module.path
-                            module_name = Path(module.path).stem
+            # Use optimized template context with caching
+            kwargs = self._get_optimized_template_context(
+                path_modules=path_modules, 
+                path_solution=path_solution
+            )
 
-                            spec = importlib.util.spec_from_file_location(
-                                module_name, module_path
-                            )
-                            module = importlib.util.module_from_spec(spec)
-                            sys.modules[module_name] = module
-                            spec.loader.exec_module(module)
+            self.logger.debug(f"Template context contains {len(kwargs)} items")
 
-                            dict_module: dict = module.get_dict_modules()
-                            dict_modules = dict_modules | dict_module
-
-                else:
-                    spec = importlib.util.spec_from_file_location(
-                        module_name, path_modules
-                    )
-                    module = importlib.util.module_from_spec(spec)
-                    sys.modules[module_name] = module
-                    spec.loader.exec_module(module)
-
-                    dict_modules: dict = module.get_dict_modules()
-
-            kwargs = dict_model | dict_modules
-
-            self.logger.debug("Template Render Arguments: %s" % str(kwargs))
-
-            # Remove old template from directory
-            self.__delete_template(path_template=_path_template_destination)
+            # Use optimized file operations
+            self._optimize_file_operations(_path_template_destination)
 
             for template_path in ls_templates_source:
                 # _path_template_source = os.path.abspath(template_path)

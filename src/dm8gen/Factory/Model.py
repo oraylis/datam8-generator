@@ -14,6 +14,7 @@ from .AttributeTypesFactory import AttributeTypesFactory
 from .DataModuleFactory import DataModuleFactory
 from .DataTypesFactory import DataTypesFactory
 from .EntityFactory import EntityFactory
+from .CacheManager import CacheManager
 from ..Generated.Solution import Model as Solution
 from ..Generated.Index import Model as Index
 from ..Helper.Helper import Helper, JsonFileParseException
@@ -23,15 +24,23 @@ logger = logging.getLogger(__name__)
 
 
 class Model:
-    CACHE_DATA_SOURCE: dict = {}
-    CACHE_ATTRIBUTE_TYPES: dict = {}
-    CACHE_DATA_MODULE: dict = {}
-    CACHE_DATA_TYPES: dict = {}
-
+    """
+    Model class with optimized caching and performance improvements.
+    
+    This class has been enhanced with:
+    - Optimized cache management with TTL and size limits
+    - Efficient duplicate detection algorithms
+    - Better error handling and validation
+    - Memory usage optimizations
+    """
+    
     path_solution: str = None
     dict_solution: str = None
     errors: list = []
     log_level: logging.log = None
+    
+    # Cache for solution object to avoid repeated JSON parsing
+    _solution_cache: dict = {}
 
     def __init__(
         self, path_solution: str, log_level: logging.log = logging.INFO
@@ -46,11 +55,30 @@ class Model:
 
     @property
     def solution(self) -> Solution:
+        """
+        Get solution object with caching to avoid repeated JSON parsing.
+        """
         try:
-            solution_object = Solution.model_validate_json(
-                json.dumps(Helper.read_json(path=self.path_solution))
-            )
-            # self.logger.info('Successfully init Solution object')
+            # Check if we have a cached solution for this path
+            if self.path_solution in self._solution_cache:
+                cached_entry = self._solution_cache[self.path_solution]
+                # Check if file has been modified since caching
+                file_mtime = os.path.getmtime(self.path_solution)
+                if cached_entry['mtime'] >= file_mtime:
+                    self.logger.debug(f"Using cached solution object for {self.path_solution}")
+                    return cached_entry['solution']
+            
+            # Read and parse solution file
+            solution_data = Helper.read_json(path=self.path_solution)
+            solution_object = Solution.model_validate_json(json.dumps(solution_data))
+            
+            # Cache the solution with file modification time
+            self._solution_cache[self.path_solution] = {
+                'solution': solution_object,
+                'mtime': os.path.getmtime(self.path_solution)
+            }
+            
+            self.logger.debug(f"Loaded and cached solution object from {self.path_solution}")
             return solution_object
         except Exception as e:
             self.__error_handler(e)
@@ -128,20 +156,20 @@ class Model:
             self.__get_dict_path(self.path_base), "DataSources.json"
         )
 
-        if path_datasource in Model.CACHE_DATA_SOURCE:
-            self.logger.debug(
-                "Cached DataSourceFactory for %s" % path_datasource
-            )
-            return Model.CACHE_DATA_SOURCE[path_datasource]
+        # Use optimized cache
+        cache = CacheManager.get_data_source_cache()
+        cached_factory = cache.get(path_datasource)
+        
+        if cached_factory is not None:
+            self.logger.debug(f"Using cached DataSourceFactory for {path_datasource}")
+            return cached_factory
 
         try:
             datasource_factory = DataSourceFactory(
                 path=path_datasource, log_level=self.log_level
             )
-            Model.CACHE_DATA_SOURCE[path_datasource] = datasource_factory
-            self.logger.info(
-                "Successfully init Datasource Factory from %s" % path_datasource
-            )
+            cache.set(path_datasource, datasource_factory)
+            self.logger.info(f"Created and cached DataSourceFactory from {path_datasource}")
 
             return datasource_factory
         except Exception as e:
@@ -152,23 +180,21 @@ class Model:
         path_attribute_types: str = os.path.join(
             self.__get_dict_path(self.path_base), "AttributeTypes.json"
         )
-        if path_attribute_types in Model.CACHE_ATTRIBUTE_TYPES:
-            self.logger.debug(
-                "Cached AttributeTypesFactory for %s" % path_attribute_types
-            )
-            return Model.CACHE_ATTRIBUTE_TYPES[path_attribute_types]
+        
+        # Use optimized cache
+        cache = CacheManager.get_attribute_types_cache()
+        cached_factory = cache.get(path_attribute_types)
+        
+        if cached_factory is not None:
+            self.logger.debug(f"Using cached AttributeTypesFactory for {path_attribute_types}")
+            return cached_factory
 
         try:
             attribute_types_factory = AttributeTypesFactory(
                 path=path_attribute_types, log_level=self.log_level
             )
-            Model.CACHE_ATTRIBUTE_TYPES[path_attribute_types] = (
-                attribute_types_factory
-            )
-            self.logger.info(
-                "Successfully init Attribute Factory from %s"
-                % path_attribute_types
-            )
+            cache.set(path_attribute_types, attribute_types_factory)
+            self.logger.info(f"Created and cached AttributeTypesFactory from {path_attribute_types}")
 
             return attribute_types_factory
         except Exception as e:
@@ -179,21 +205,21 @@ class Model:
         path_data_modules: str = os.path.join(
             self.__get_dict_path(self.path_base), "DataModules.json"
         )
-        if path_data_modules in Model.CACHE_DATA_MODULE:
-            self.logger.debug(
-                "Cached DataModuleFactory for %s" % path_data_modules
-            )
-            return Model.CACHE_DATA_MODULE[path_data_modules]
+        
+        # Use optimized cache
+        cache = CacheManager.get_data_module_cache()
+        cached_factory = cache.get(path_data_modules)
+        
+        if cached_factory is not None:
+            self.logger.debug(f"Using cached DataModuleFactory for {path_data_modules}")
+            return cached_factory
 
         try:
             data_modules_factory = DataModuleFactory(
                 path=path_data_modules, log_level=self.log_level
             )
-            Model.CACHE_DATA_MODULE[path_data_modules] = data_modules_factory
-            self.logger.info(
-                "Successfully init Data Module Factory from %s"
-                % path_data_modules
-            )
+            cache.set(path_data_modules, data_modules_factory)
+            self.logger.info(f"Created and cached DataModuleFactory from {path_data_modules}")
 
             return data_modules_factory
         except Exception as e:
@@ -204,20 +230,21 @@ class Model:
         path_data_types: str = os.path.join(
             self.__get_dict_path(self.path_base), "DataTypes.json"
         )
-        if path_data_types in Model.CACHE_DATA_TYPES:
-            self.logger.debug(
-                "Cached DataTypesFactory for %s" % path_data_types
-            )
-            return Model.CACHE_DATA_TYPES[path_data_types]
+        
+        # Use optimized cache
+        cache = CacheManager.get_data_types_cache()
+        cached_factory = cache.get(path_data_types)
+        
+        if cached_factory is not None:
+            self.logger.debug(f"Using cached DataTypesFactory for {path_data_types}")
+            return cached_factory
 
         try:
             data_types_factory = DataTypesFactory(
                 path=path_data_types, log_level=self.log_level
             )
-            Model.CACHE_DATA_TYPES[path_data_types] = data_types_factory
-            self.logger.info(
-                "Successfully init Data Types Factory from %s" % path_data_types
-            )
+            cache.set(path_data_types, data_types_factory)
+            self.logger.info(f"Created and cached DataTypesFactory from {path_data_types}")
 
             return data_types_factory
         except Exception as e:
@@ -226,6 +253,54 @@ class Model:
     def __error_handler(self, e: Exception):
         self.errors.append(e)
         self.logger.error(str(e))
+    
+    def clear_caches(self):
+        """
+        Clear all caches to free memory.
+        """
+        # Clear instance-specific caches
+        self._solution_cache.clear()
+        
+        # Clear managed caches
+        CacheManager.clear_all_caches()
+        
+        self.logger.info("Cleared all caches")
+    
+    def cleanup_expired_caches(self):
+        """
+        Clean up expired entries from all caches.
+        """
+        expired_count = CacheManager.cleanup_all_expired()
+        self.logger.debug(f"Cleaned up {expired_count} expired cache entries")
+        return expired_count
+    
+    def get_cache_stats(self) -> dict:
+        """
+        Get comprehensive cache statistics.
+        """
+        stats = CacheManager.get_global_stats()
+        stats['solution_cache_size'] = len(self._solution_cache)
+        return stats
+    
+    def get_cache_memory_usage(self) -> dict:
+        """
+        Get memory usage statistics for all caches.
+        """
+        memory_stats = CacheManager.get_global_memory_usage()
+        
+        # Add solution cache memory usage
+        import sys
+        solution_cache_bytes = sum(
+            sys.getsizeof(key) + sys.getsizeof(value) 
+            for key, value in self._solution_cache.items()
+        )
+        
+        memory_stats['solution_cache'] = {
+            'total_bytes': solution_cache_bytes,
+            'entry_count': len(self._solution_cache)
+        }
+        
+        return memory_stats
 
     def __get_dict_path(self, dict_item) -> str:
         # ToDo: Implement relative path (e.g. ./base)
@@ -450,15 +525,31 @@ class Model:
         return __idx
 
     def __check_index_duplicates(self, idx: Index):
-        ls_locators: list[str] = []
+        """
+        Optimized duplicate detection using set for O(n) performance instead of O(n²).
+        """
+        seen_locators: set[str] = set()
+        duplicate_info: list = []
+        
         for item in self.__get_index_items():
-            for i in getattr(idx, f"{item[0]}").entry:
-                if i.locator in ls_locators:
-                    raise ValueError(
-                        f"Error generating index due to duplicate locator: {i.locator} in file: {i.absPath}"
-                    )
+            for entry in getattr(idx, f"{item[0]}").entry:
+                if entry.locator in seen_locators:
+                    duplicate_info.append({
+                        'locator': entry.locator,
+                        'file_path': entry.absPath,
+                        'index_type': item[0]
+                    })
                 else:
-                    ls_locators.append(i.locator)
+                    seen_locators.add(entry.locator)
+        
+        if duplicate_info:
+            error_details = '\n'.join([
+                f"  - {dup['locator']} in {dup['file_path']} ({dup['index_type']})" 
+                for dup in duplicate_info
+            ])
+            raise ValueError(
+                f"Index generation failed due to {len(duplicate_info)} duplicate locator(s):\n{error_details}"
+            )
 
     def check_zone_for_entities(self, zone: str) -> bool:
         if zone == "raw":

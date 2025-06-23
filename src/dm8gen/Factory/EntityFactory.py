@@ -1,64 +1,70 @@
-import json
+import logging
+from typing import Union
+
 from ..Generated.RawModelEntry import Model as Raw
 from ..Generated.StageModelEntry import Model as Stage
-from ..Helper.Helper import Helper
-import logging
+from ..Generated.CoreModelEntry import Model as Core
+from ..Generated.CuratedModelEntry import Model as Curated
+from .BaseEntityFactory import BaseEntityFactory
 
-logger = logging.getLogger(__name__)
 
+class EntityFactory(BaseEntityFactory):
+    """
+    General-purpose entity factory that can handle any entity type.
+    
+    This factory automatically detects the entity type from the JSON data
+    and creates the appropriate model object. It's useful when you don't
+    know the entity type in advance.
+    """
 
-class EntityFactory:
-    """Factory class for Entities."""
-
-    file_path: str = None
-    model_json: json = None
-    model_object: Raw = None
-    model_type: str = None
-    errors: list = []
-    log_level: logging.log = None
-
-    def __init__(self, path: str, log_level: logging.log = logging.INFO) -> None:
+    def __init__(self, path: str, log_level: int = logging.INFO) -> None:
         """Initialize the EntityFactory.
 
         Args:
             path (str): The path to the file.
-            log_level (logging.log, optional): The logging level. Defaults to logging.INFO.
+            log_level (int, optional): The logging level. Defaults to logging.INFO.
         """
-        try:
-            self.logger: logging.Logger = Helper.start_logger(
-                self.__class__.__name__, log_level=log_level
-            )
-            self.file_path = path
-            self.model_json = Helper.read_json(self.file_path)
-            self.model_object = Raw.model_validate_json(json.dumps(self.model_json))
-            self.model_type = self.model_object.type.value
-        except Exception as e:
-            self.__error_handler(str(e))
+        # We need to determine the model class dynamically
+        self._determine_model_class(path)
+        super().__init__(path=path, model_class=self._model_class, log_level=log_level)
 
-
-    def __error_handler(self, msg: str):
-        """Handle errors.
-
+    def _determine_model_class(self, path: str) -> None:
+        """
+        Determine the correct model class based on the entity type in the JSON.
+        
         Args:
-            msg (str): The error message.
+            path (str): Path to the JSON file.
         """
-        self.errors.append(f"Error EntityFactory with error: {msg}")
-        self.logger.error(msg)
+        from ..Helper.Helper import Helper
+        
+        try:
+            # Read the JSON to determine the type
+            model_json = Helper.read_json(path)
+            entity_type = model_json.get("type", "").lower()
+            
+            # Map entity types to model classes
+            type_to_model = {
+                "raw": Raw,
+                "stage": Stage,
+                "core": Core,
+                "curated": Curated
+            }
+            
+            self._model_class = type_to_model.get(entity_type)
+            
+            if self._model_class is None:
+                raise ValueError(f"Unknown entity type: {entity_type}")
+                
+        except Exception as e:
+            # Default to Raw if we can't determine the type
+            self._model_class = Raw
+            raise ValueError(f"Could not determine entity type from {path}: {e}")
 
-    def __get_entity_object(self) -> object:
-        """Get the entity object.
+    def get_entity_object(self) -> Union[Raw, Stage, Core, Curated]:
+        """
+        Get the entity object with proper typing.
 
         Returns:
-            object: The entity object.
+            Union[Raw, Stage, Core, Curated]: The validated entity object.
         """
-        if self.model_type is not None:
-            if self.entity_typ.lower() == "raw":
-                __entity_object = Raw.model_validate_json(json.dumps(self.json))
-            elif self.entity_typ.lower() == "stage":
-                __entity_object = Stage.model_validate_json(json.dumps(self.model_json))
-            else:
-                self.__error_handler(
-                    f"No valid type found in file from path {self.file_path}"
-                )
-
-            return __entity_object
+        return self.model_object

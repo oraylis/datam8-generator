@@ -1,15 +1,17 @@
 import json
 from ..Generated.DataSources import Model as DataSources
 from ..Helper.Helper import Helper
+from .CacheManager import OptimizedCache
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class DataSourceFactory:
-    """Factory class for Data Sources."""
+    """Factory class for Data Sources with optimized caching and error handling."""
 
-    CACHE_MAPPING: dict = {}
+    # Replace unbounded dict with optimized cache
+    _mapping_cache = OptimizedCache(max_size=1000, default_ttl=3600)
 
     json: json = None
     source_object: object = None
@@ -25,15 +27,23 @@ class DataSourceFactory:
             path (str): The path to the file.
             log_level (logging.log, optional): The logging level. Defaults to logging.INFO.
         """
+        self.path = path
+        self.log_level = log_level
+        self.logger: logging.Logger = Helper.start_logger(
+            self.__class__.__name__, log_level=log_level
+        )
+        
         try:
-            self.logger: logging.Logger = Helper.start_logger(
-                self.__class__.__name__, log_level=log_level
-            )
             self.json = Helper.read_json(path)
             self.source_object = self.__get_object()
+            self.logger.debug(f"Successfully initialized DataSourceFactory from {path}")
 
+        except FileNotFoundError:
+            self.__error_handler(f"Data sources file not found: {path}")
+        except json.JSONDecodeError as e:
+            self.__error_handler(f"Invalid JSON in data sources file {path}: {e}")
         except Exception as e:
-            self.__error_handler(e)
+            self.__error_handler(f"Failed to initialize DataSourceFactory: {e}")
 
     def __error_handler(self, msg: str):
         """Handle errors.
@@ -90,7 +100,7 @@ class DataSourceFactory:
             self.__error_handler(e)
 
     def get_datasource_target_type(self, source_name: str, source_type) -> str:
-        """Get the target type of the data source.
+        """Get the target type of the data source with optimized caching.
 
         Args:
             source_name (str): The name of the data source.
@@ -99,31 +109,65 @@ class DataSourceFactory:
         Returns:
             str: The target type of the data source.
         """
-        cache_key = "%s:%s" % (source_name, source_type)
-        if cache_key in DataSourceFactory.CACHE_MAPPING:
-            self.logger.debug("Cached mapping return for %s" % cache_key)
-            return DataSourceFactory.CACHE_MAPPING[cache_key]
+        cache_key = f"{source_name}:{source_type}"
+        
+        # Check optimized cache
+        cached_result = self._mapping_cache.get(cache_key)
+        if cached_result is not None:
+            self.logger.debug(f"Using cached mapping for {cache_key}")
+            return cached_result
 
         try:
-            __source_item = self.get_datasource(source_name=source_name)
-            __ls_target_type = [
-                i.targetType
-                for i in __source_item.dataTypeMapping
-                if i.sourceType == source_type
+            source_item = self.get_datasource(source_name=source_name)
+            if source_item is None:
+                self.__error_handler(f"Data source '{source_name}' not found")
+                return ""
+            
+            # Use more efficient lookup
+            target_types = [
+                mapping.targetType
+                for mapping in source_item.dataTypeMapping
+                if mapping.sourceType == source_type
             ]
-            if len(__ls_target_type) == 1:
-                __target_type = __ls_target_type[0]
+            
+            if len(target_types) == 1:
+                target_type = target_types[0]
                 self.logger.debug(
-                    f"Mapping Datasource {source_name} from sourceType: {source_type} to targetType: {__target_type}"
+                    f"Mapped {source_name} from {source_type} to {target_type}"
+                )
+            elif len(target_types) == 0:
+                target_type = ""
+                self.logger.warning(
+                    f"No mapping found for {source_name} sourceType: {source_type}"
                 )
             else:
-                __target_type = ""
-                self.__error_handler(
-                    f"Invalid Mapping Datasource {source_name} from sourceType: {source_type} to targetType: {__ls_target_type}"
+                target_type = target_types[0]  # Use first match
+                self.logger.warning(
+                    f"Multiple mappings found for {source_name} sourceType: {source_type}, using first: {target_type}"
                 )
 
-            DataSourceFactory.CACHE_MAPPING[cache_key] = __target_type
-            return __target_type
+            # Cache the result
+            self._mapping_cache.set(cache_key, target_type)
+            return target_type
 
+        except AttributeError as e:
+            self.__error_handler(f"Invalid data source structure for {source_name}: {e}")
+            return ""
         except Exception as e:
-            self.__error_handler(e)
+            self.__error_handler(f"Error getting target type for {source_name}:{source_type} - {e}")
+            return ""
+    
+    @classmethod
+    def clear_mapping_cache(cls):
+        """Clear the mapping cache."""
+        cls._mapping_cache.clear()
+        logger.debug("Cleared DataSourceFactory mapping cache")
+    
+    @classmethod
+    def get_cache_stats(cls):
+        """Get cache statistics."""
+        return cls._mapping_cache.get_stats()
+    
+    def get_all_datasources(self):
+        """Get all data sources - alias for get_datasource_list for consistency."""
+        return self.get_datasource_list()
