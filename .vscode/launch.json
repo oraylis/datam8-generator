@@ -1,0 +1,32 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "inputs": [
+        {
+            "id": "model-path",
+            "type": "promptString",
+            "default": "C:\\Work\\local\\datam8\\new-model-01",
+            "description": "path to meta model"
+        }
+    ], 
+    "configurations": [
+        {
+            "name": "debug dm8gen: new-model-01",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "dm8gen",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "-a", "refresh_generate", 
+                "-s", "${input:model-path}\\new-model-01.dm8s",
+                "-src", "${input:model-path}\\Generate_v2\\databricks-lake",
+                "-dest", "${input:model-path}\\Output",
+                "-m", "${input:model-path}\\Generate_v2\\databricks-lake\\__modules",
+                "-c", "${input:model-path}\\Generate_v2\\databricks-lake\\__collections"
+            ]
+        }
+    ]
+}

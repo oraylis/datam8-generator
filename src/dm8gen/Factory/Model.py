@@ -5,15 +5,16 @@ import sys
 from typing import Union
 from dataclasses import dataclass
 import textwrap
-from .RawEntityFactory import RawEntityFactory
-from .StageEntityFactory import StageEntityFactory
-from .CoreEntityFactory import CoreEntityFactory
-from .CuratedEntityFactory import CuratedEntityFactory
+from .ModelDataEntityFactory import ModelDataEntityFactory
+# from .RawEntityFactory import RawEntityFactory
+# from .StageEntityFactory import StageEntityFactory
+# from .CoreEntityFactory import CoreEntityFactory
+# from .CuratedEntityFactory import CuratedEntityFactory
 from .DataSourceFactory import DataSourceFactory
 from .AttributeTypesFactory import AttributeTypesFactory
 from .DataModuleFactory import DataModuleFactory
 from .DataTypesFactory import DataTypesFactory
-from .EntityFactory import EntityFactory
+# from .EntityFactory import EntityFactory
 from ..Generated.Solution import Model as Solution
 from ..Generated.Index import Model as Index
 from ..Helper.Helper import Helper, JsonFileParseException
@@ -178,95 +179,125 @@ class Model:
         _idx = Index.model_validate_json(json.dumps(idx_json))
         return _idx
 
-    def get_raw_entity(self, path: str) -> RawEntityFactory:
+    # def get_raw_entity(self, path: str) -> RawEntityFactory:
+    #     try:
+    #         return RawEntityFactory(path=path, log_level=self.log_level)
+    #     except Exception as e:
+    #         self.__error_handler(e)
+
+    def get_modeldata_entity(self, path: str) -> ModelDataEntityFactory:
         try:
-            return RawEntityFactory(path=path, log_level=self.log_level)
+            return ModelDataEntityFactory(path=path, log_level=self.log_level)
         except Exception as e:
             self.__error_handler(e)
 
-    def get_stage_entity(self, path: str) -> StageEntityFactory:
-        try:
-            return StageEntityFactory(path=path, log_level=self.log_level)
-        except Exception as e:
-            self.__error_handler(e)
+    # def get_stage_entity(self, path: str) -> StageEntityFactory:
+    #     try:
+    #         return StageEntityFactory(path=path, log_level=self.log_level)
+    #     except Exception as e:
+    #         self.__error_handler(e)
 
-    def get_core_entity(self, path: str) -> CoreEntityFactory:
-        try:
-            return CoreEntityFactory(path=path, log_level=self.log_level)
-        except Exception as e:
-            self.__error_handler(e)
+    # def get_core_entity(self, path: str) -> CoreEntityFactory:
+    #     try:
+    #         return CoreEntityFactory(path=path, log_level=self.log_level)
+    #     except Exception as e:
+    #         self.__error_handler(e)
 
-    def get_curated_entity(self, path: str) -> CuratedEntityFactory:
-        try:
-            return CuratedEntityFactory(path=path, log_level=self.log_level)
-        except Exception as e:
-            self.__error_handler(e)
+    # def get_curated_entity(self, path: str) -> CuratedEntityFactory:
+    #     try:
+    #         return CuratedEntityFactory(path=path, log_level=self.log_level)
+    #     except Exception as e:
+    #         self.__error_handler(e)
 
-    def get_entity(self, path: str) -> EntityFactory:
-        try:
-            return EntityFactory(path=path, log_level=self.log_level)
-        except Exception as e:
-            self.__error_handler(e)
+    # def get_entity(self, path: str) -> EntityFactory:
+    #     try:
+    #         return EntityFactory(path=path, log_level=self.log_level)
+    #     except Exception as e:
+    #         self.__error_handler(e)
 
-    def get_raw_entity_list(self) -> list[RawEntityFactory]:
-        ls_raw_entity = []
-        index = self.get_index()
+    # def get_raw_entity_list(self) -> list[RawEntityFactory]:
+    #     ls_raw_entity = []
+    #     index = self.get_index()
 
-        for e in index.rawIndex.entry:
-            self.logger.debug(
-                f"Added to raw entity list locator: {e.locator} file: {e.absPath}"
-            )
-            ls_raw_entity.append(self.get_raw_entity(path=e.absPath))
+    #     for e in index.rawIndex.entry:
+    #         self.logger.debug(
+    #             f"Added to raw entity list locator: {e.locator} file: {e.absPath}"
+    #         )
+    #         ls_raw_entity.append(self.get_raw_entity(path=e.absPath))
 
-        return ls_raw_entity
+    #     return ls_raw_entity
 
-    def get_stage_entity_list(self) -> list[StageEntityFactory]:
-        ls_stage_entity = []
-        index = self.get_index()
-
-        for e in index.stageIndex.entry:
-            self.logger.debug(
-                f"Added to stage entity list locator: {e.locator} file: {e.absPath}"
-            )
-            ls_stage_entity.append(self.get_stage_entity(path=e.absPath))
-
-        return ls_stage_entity
-
-    def get_core_entity_list(self) -> list[CoreEntityFactory]:
-        ls_core_entity = []
-        index = self.get_index()
-
-        for e in index.coreIndex.entry:
-            self.logger.debug(
-                f"Added to core entity list locator: {e.locator} file: {e.absPath}"
-            )
-            ls_core_entity.append(self.get_core_entity(path=e.absPath))
-
-        return ls_core_entity
-
-    def get_curated_entity_list(self) -> list[CuratedEntityFactory]:
-        ls_curated_entity = []
-        index = self.get_index()
-
-        for e in index.curatedIndex.entry:
-            self.logger.debug(
-                f"Added to curated entity list locator: {e.locator} file: {e.absPath}"
-            )
-            ls_curated_entity.append(self.get_curated_entity(path=e.absPath))
-
-        return ls_curated_entity
-
-    def get_entity_list(
-        self, regex: str = r"^([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)"
-    ) -> list[EntityFactory]:
+    # todo: type besser machen
+    def get_modeldata_entity_list(self, type:str) -> list[ModelDataEntityFactory]:
         ls_entity = []
-        for e in self.get_locator(regex=regex):
+        index = self.get_index()
+
+        type_entry = None
+        match type:
+            case "raw":
+                type_entry = index.rawIndex.entry
+            case "stage":
+                type_entry = index.stageIndex.entry
+            case "core":
+                type_entry = index.coreIndex.entry
+            case "curated":
+                type_entry = index.curatedIndex.entry
+
+        for e in type_entry:
             self.logger.debug(
-                f"Added to raw entity list locator: {e.locator} file: {e.absPath}"
+                f"Added to {type} entity list locator: {e.locator} file: {e.absPath}"
             )
-            ls_entity.append(self.get_entity(path=e.absPath))
+            ls_entity.append(self.get_modeldata_entity(path=e.absPath))
 
         return ls_entity
+    
+    # def get_stage_entity_list(self) -> list[StageEntityFactory]:
+    #     ls_stage_entity = []
+    #     index = self.get_index()
+
+    #     for e in index.stageIndex.entry:
+    #         self.logger.debug(
+    #             f"Added to stage entity list locator: {e.locator} file: {e.absPath}"
+    #         )
+    #         ls_stage_entity.append(self.get_stage_entity(path=e.absPath))
+
+    #     return ls_stage_entity    
+
+    # def get_core_entity_list(self) -> list[CoreEntityFactory]:
+    #     ls_core_entity = []
+    #     index = self.get_index()
+
+    #     for e in index.coreIndex.entry:
+    #         self.logger.debug(
+    #             f"Added to core entity list locator: {e.locator} file: {e.absPath}"
+    #         )
+    #         ls_core_entity.append(self.get_core_entity(path=e.absPath))
+
+    #     return ls_core_entity
+
+    # def get_curated_entity_list(self) -> list[CuratedEntityFactory]:
+    #     ls_curated_entity = []
+    #     index = self.get_index()
+
+    #     for e in index.curatedIndex.entry:
+    #         self.logger.debug(
+    #             f"Added to curated entity list locator: {e.locator} file: {e.absPath}"
+    #         )
+    #         ls_curated_entity.append(self.get_curated_entity(path=e.absPath))
+
+    #     return ls_curated_entity
+
+    # def get_entity_list(
+    #     self, regex: str = r"^([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)\/([A-Za-z]*)"
+    # ) -> list[EntityFactory]:
+    #     ls_entity = []
+    #     for e in self.get_locator(regex=regex):
+    #         self.logger.debug(
+    #             f"Added to raw entity list locator: {e.locator} file: {e.absPath}"
+    #         )
+    #         ls_entity.append(self.get_entity(path=e.absPath))
+
+    #     return ls_entity
 
     def __get_index_items(self) -> list[tuple[str, str]]:
         ls_index_items: list[tuple[str, str]] = [
@@ -488,59 +519,61 @@ class Model:
 
         return ls_locators
 
-    def lookup_entity(
-        self, locator: str
-    ) -> Union[
-        RawEntityFactory,
-        StageEntityFactory,
-        CoreEntityFactory,
-        CuratedEntityFactory,
-    ]:
-        """
-        Lookup an entity object by locator
+    # def lookup_entity(
+    #     self, locator: str
+    # ) -> Union[
+    #     RawEntityFactory,
+    #     StageEntityFactory,
+    #     CoreEntityFactory,
+    #     CuratedEntityFactory,
+    # ]:
+    #     """
+    #     Lookup an entity object by locator
 
-        Arguments:
-            locator(str): Locator to lookup in the index, e.g. "/Raw/Sales/Customer/Customer_DE"
-        """
-        self.logger.debug("Start looking for locator: %s" % locator)
+    #     Arguments:
+    #         locator(str): Locator to lookup in the index, e.g. "/Raw/Sales/Customer/Customer_DE"
+    #     """
+    #     self.logger.debug("Start looking for locator: %s" % locator)
 
-        if not locator.startswith("/"):
-            locator = "/" + locator
+    #     if not locator.startswith("/"):
+    #         locator = "/" + locator
 
-        layer = locator.lower().split("/")[1]
+    #     layer = locator.lower().split("/")[1]
 
-        locator_index = self.get_locator(regex=locator)
-        self.logger.debug("Locator Index: %s" % str(locator_index))
+    #     locator_index = self.get_locator(regex=locator)
+    #     self.logger.debug("Locator Index: %s" % str(locator_index))
 
-        for locator_index in self.get_locator(regex=locator):
-            if layer == "raw":
-                return self.get_raw_entity(path=locator_index.absPath)
-            elif layer == "stage":
-                return self.get_stage_entity(path=locator_index.absPath)
-            elif layer == "core":
-                return self.get_core_entity(path=locator_index.absPath)
-            elif layer == "curated":
-                return self.get_curated_entity(path=locator_index.absPath)
+    #     for locator_index in self.get_locator(regex=locator):
+    #         if layer == "raw":
+    #             return self.get_raw_entity(path=locator_index.absPath)
+    #         else:
+    #             return self.get_entry_by_path(path=locator_index.absPath)
+    #         # elif layer == "stage" :
+    #         #     return self.get_stage_entity(path=locator_index.absPath)
+    #         # elif layer == "core":
+    #         #     return self.get_core_entity(path=locator_index.absPath)
+    #         # elif layer == "curated":
+    #         #     return self.get_curated_entity(path=locator_index.absPath)
 
-    def lookup_stage_entity(self, locator: str) -> StageEntityFactory:
-        """
-        Lookup a Stage entity object by locator
+    # def lookup_stage_entity(self, locator: str) -> StageEntityFactory:
+    #     """
+    #     Lookup a Stage entity object by locator
 
-        Parameters:
-            locator: str = Stage locator to lookup in index (e.g "Stage/Sales/Customer/Customer_DE")
-        """
-        self.logger.debug("Start looking for locator: %s" % locator)
+    #     Parameters:
+    #         locator: str = Stage locator to lookup in index (e.g "Stage/Sales/Customer/Customer_DE")
+    #     """
+    #     self.logger.debug("Start looking for locator: %s" % locator)
 
-        if locator.lower().startswith("/stage"):
-            locator_index = self.get_locator(regex=locator)
-            self.logger.debug("Locator Index: %s" % str(locator_index))
+    #     if locator.lower().startswith("/stage"):
+    #         locator_index = self.get_locator(regex=locator)
+    #         self.logger.debug("Locator Index: %s" % str(locator_index))
 
-            for locator_index in self.get_locator(regex=locator):
-                return self.get_stage_entity(path=locator_index.absPath)
-        else:
-            self.logger.warning(
-                f"Can not return stage object as the locatore {locator} is not a stage location"
-            )
+    #         for locator_index in self.get_locator(regex=locator):
+    #             return self.get_stage_entity(path=locator_index.absPath)
+    #     else:
+    #         self.logger.warning(
+    #             f"Can not return stage object as the locatore {locator} is not a stage location"
+    #         )
 
     def perform_initial_checks(self, *layers) -> int:
         """Performs some simple checks to validate the model before actually
@@ -556,67 +589,63 @@ class Model:
         self.logger.debug("Start performing initial model checks")
 
         if "raw" in layers:
-            self.__perform_raw_checks()
+            self.__perform_checks("raw")
 
         if "stage" in layers:
-            self.__perform_stage_checks()
+            self.__perform_checks("stage")
 
         if "core" in layers:
-            self.__perform_core_checks()
+            self.__perform_checks("core")
 
         if "curated" in layers:
-            self.__perform_curated_checks()
+            self.__perform_checks("curated")
 
         self.logger.info("Finished initial model checks")
 
         return 0
 
-    def __perform_raw_checks(self) -> None:
-        raw_entities: list = self.get_raw_entity_list()
+    def __perform_checks(self, type: str) -> None:
+        entities: list = self.get_modeldata_entity_list(type)
+        
+        self.logger.info(f"{type} entities to process: %s" % str(len(entities)))
 
-        self.logger.info("Raw Entities to process: %s" % str(len(raw_entities)))
+    # def __perform_core_checks(self) -> None:
+    #     core_entities: list = self.get_core_entity_list()
+    #     self.logger.info("Core Entities to process: %s" % str(len(core_entities)))
 
-    def __perform_stage_checks(self) -> None:
-        stage_entities: list = self.get_stage_entity_list()
-        self.logger.info("Stage Entities to process: %s" % str(len(stage_entities)))
+    #     for entity in core_entities:
+    #         table = entity.model_object.entity
+    #         function = entity.model_object.function
+    #         sources: list = filter(lambda x: x.dm8l != "#", function.source)
 
-    def __perform_core_checks(self) -> None:
-        core_entities: list = self.get_core_entity_list()
-        self.logger.info("Core Entities to process: %s" % str(len(core_entities)))
+    #         self.logger.debug("Core Table: %s" % table.name)
 
-        for entity in core_entities:
-            table = entity.model_object.entity
-            function = entity.model_object.function
-            sources: list = filter(lambda x: x.dm8l != "#", function.source)
+    #         # validate source locators
+    #         for source in sources:
+    #             self.logger.debug("Source Entity Locator: %s" % source.dm8l)
+    #             stage_entity = self.lookup_stage_entity(source.dm8l)
+    #             self.logger.debug(
+    #                 "Source Entity: %s" % stage_entity.model_object.entity.name
+    #             )
 
-            self.logger.debug("Core Table: %s" % table.name)
+    # def __perform_curated_checks(self) -> None:
+    #     curated_entities: list = self.get_curated_entity_list()
+    #     self.logger.info("Curated Entities to process: %s" % str(len(curated_entities)))
 
-            # validate source locators
-            for source in sources:
-                self.logger.debug("Source Entity Locator: %s" % source.dm8l)
-                stage_entity = self.lookup_stage_entity(source.dm8l)
-                self.logger.debug(
-                    "Source Entity: %s" % stage_entity.model_object.entity.name
-                )
+    #     for entity in curated_entities:
+    #         table = entity.model_object.entity
+    #         functions = entity.model_object.function
 
-    def __perform_curated_checks(self) -> None:
-        curated_entities: list = self.get_curated_entity_list()
-        self.logger.info("Curated Entities to process: %s" % str(len(curated_entities)))
+    #         self.logger.debug("Curated Table: %s" % table.name)
 
-        for entity in curated_entities:
-            table = entity.model_object.entity
-            functions = entity.model_object.function
-
-            self.logger.debug("Curated Table: %s" % table.name)
-
-            for function in functions:
-                # validate source locators
-                for source in function.source:
-                    self.logger.debug("Source Entity Locator: %s" % source.dm8l)
-                    core_entity = self.lookup_entity(source.dm8l)
-                    self.logger.debug(
-                        "Source Entity: %s" % core_entity.model_object.entity.name
-                    )
+    #         for function in functions:
+    #             # validate source locators
+    #             for source in function.source:
+    #                 self.logger.debug("Source Entity Locator: %s" % source.dm8l)
+    #                 core_entity = self.lookup_entity(source.dm8l)
+    #                 self.logger.debug(
+    #                     "Source Entity: %s" % core_entity.model_object.entity.name
+    #                 )
 
     class ModelParseException(Exception):
         def __init__(
