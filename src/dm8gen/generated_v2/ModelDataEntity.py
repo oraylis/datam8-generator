@@ -230,7 +230,7 @@ class FunctionsTransformationBuildIn(BaseModel):
         return FunctionsTransformationBuildIn.model_validate(obj, from_attributes=False)
 
 
-class FunctionsSourceSource(BaseModel):
+class FunctionsSourceSystem(BaseModel):
     model_config = ConfigDict(extra='allow', populate_by_name=True)
     type: Type1
     dataSource: str
@@ -241,8 +241,8 @@ class FunctionsSourceSource(BaseModel):
         return self.model_dump(by_alias=True, exclude_unset=True, mode='json')
 
     @staticmethod
-    def from_dict(obj) -> 'FunctionsSourceSource':
-        return FunctionsSourceSource.model_validate(obj, from_attributes=False)
+    def from_dict(obj) -> 'FunctionsSourceSystem':
+        return FunctionsSourceSystem.model_validate(obj, from_attributes=False)
 
 
 class FunctionsSourceModel(BaseModel):
@@ -263,7 +263,7 @@ class Functions(BaseModel):
     model_config = ConfigDict(extra='allow', populate_by_name=True)
     trigger: FunctionsTrigger
     store: FunctionsStore
-    sources: List[Union[FunctionsSourceSource, FunctionsSourceModel]]
+    sources: List[Union[FunctionsSourceSystem, FunctionsSourceModel]]
     transformations: Optional[
         List[Union[FunctionsTransformationCustom, FunctionsTransformationBuildIn]]
     ] = None
