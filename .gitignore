@@ -11,3 +11,6 @@ wheels/
 
 # environment variable files
 .envrc
+
+# DataM8 v2 Planning
+DataM8 v2/
