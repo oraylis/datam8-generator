@@ -156,6 +156,24 @@ class FunctionsTrigger(BaseModel):
 
 
 class Mode1(Enum):
+    FULL = 'full'
+    INCREMENTAL = 'incremental'
+    PERIOD = 'period'
+
+
+class FunctionsLoad(BaseModel):
+    model_config = ConfigDict(extra='allow', populate_by_name=True)
+    mode: Optional[Mode1] = None
+
+    def to_dict(self) -> dict:
+        return self.model_dump(by_alias=True, exclude_unset=True, mode='json')
+
+    @staticmethod
+    def from_dict(obj) -> 'FunctionsLoad':
+        return FunctionsLoad.model_validate(obj, from_attributes=False)
+
+
+class Mode2(Enum):
     HISTORY = 'history'
     OVERWRITE = 'overwrite'
     SNAPSHOT = 'snapshot'
@@ -163,7 +181,7 @@ class Mode1(Enum):
 
 class FunctionsStore(BaseModel):
     model_config = ConfigDict(extra='allow', populate_by_name=True)
-    mode: Optional[Mode1] = None
+    mode: Optional[Mode2] = None
 
     def to_dict(self) -> dict:
         return self.model_dump(by_alias=True, exclude_unset=True, mode='json')
@@ -262,6 +280,7 @@ class FunctionsSourceModel(BaseModel):
 class Functions(BaseModel):
     model_config = ConfigDict(extra='allow', populate_by_name=True)
     trigger: FunctionsTrigger
+    load: FunctionsLoad
     store: FunctionsStore
     sources: List[Union[FunctionsSourceSystem, FunctionsSourceModel]]
     transformations: Optional[
