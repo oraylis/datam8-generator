@@ -469,6 +469,44 @@ uv run dm8gen --action refresh_generate --path-solution "/mnt/c/Users/f.kayser/P
 uv run pytest --solution-path /path/to/datam8-sample-solution
 ```
 
+## Repository Access
+
+Claude Code has access to the following repositories in this development environment:
+
+### Available Repositories
+1. **datam8-generator** (current working directory): `/mnt/c/Users/f.kayser/Projects/ORAYLIS/Automation/Repos/datam8-generator/`
+   - Main Python CLI tool for DataM8 generation
+   - Contains factory classes, helper utilities, and core generation logic
+
+2. **datam8-sample-solution**: `/mnt/c/Users/f.kayser/Projects/ORAYLIS/Automation/Repos/datam8-sample-solution/`
+   - Reference implementation demonstrating DataM8 capabilities
+   - AdventureWorks sample data with complete Azure Databricks templates
+   - Production-ready example for testing and template development
+
+3. **datam8-model** (submodule): `/mnt/c/Users/f.kayser/Projects/ORAYLIS/Automation/Repos/datam8-generator/datam8-model/`
+   - JSON Schema definitions for all DataM8 entity types
+   - Source schemas used to generate Python classes in `src/dm8gen/Generated/`
+
+### Repository Relationships
+- **datam8-generator** imports schemas from **datam8-model** submodule during build
+- **datam8-sample-solution** provides test data and templates for **datam8-generator** 
+- All three repositories work together for complete DataM8 development workflow
+
+### Access Patterns
+```bash
+# Work with current repo (datam8-generator)
+uv run dm8gen --help
+
+# Test with sample solution
+uv run pytest --solution-path /mnt/c/Users/f.kayser/Projects/ORAYLIS/Automation/Repos/datam8-sample-solution
+
+# Generate templates using sample solution
+uv run dm8gen -a refresh_generate -s /mnt/c/Users/f.kayser/Projects/ORAYLIS/Automation/Repos/datam8-sample-solution/ORAYLISDatabricksSample.dm8s
+
+# Update schemas from submodule
+git submodule update --init --recursive
+```
+
 ## Development Notes
 
 - Always ensure submodules are up to date when working with schema changes
