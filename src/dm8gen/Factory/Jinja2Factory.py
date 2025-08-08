@@ -219,6 +219,9 @@ class Jinja2Factory:
             path_template_destination (str): The destination path for the template.
         """
         current_file = None
+        number_of_files = 0
+
+        # Check if destination path exists, if not create it
 
         try:
             for line in output.splitlines():
@@ -243,6 +246,7 @@ class Jinja2Factory:
                     self.logger.debug(f"Closing file: {input_file_name}")
                     current_file.close()
                     current_file = None
+                    number_of_files += 1
 
                     # Beautifier Format File based on type
                     __file_type = self.__get_file_type_from_line(line=strip_line)
@@ -286,6 +290,7 @@ class Jinja2Factory:
             )
 
             self.__error_handler(msg)
+        return number_of_files
 
     def generate_template(
         self,
@@ -425,14 +430,14 @@ class Jinja2Factory:
                         __output = template.render(**kwargs)
 
                         # Write output to file
-                        self.write_output(
+                        number_of_files = self.write_output(
                             input_file_name=template_name,
                             output=__output,
                             path_template_destination=_path_template_destination,
                         )
 
                         self.logger.info(
-                            f"Finished generating output for template: {_path_template}"
+                            f"Finished generating output for template '{_path_template}' with {number_of_files} files created."
                         )
 
                     except jinja2.TemplateSyntaxError as e:
