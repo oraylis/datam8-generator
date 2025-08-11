@@ -17,7 +17,7 @@ jobs:
       - name: Set up environment
         uses: ./.github/actions/setup-environment
         with:
-          uv_version: "0.6.1"
+          uv_version: "0.8.8"
           python_version_file: ".python-version"
 
       - name: Run ruff lint check
@@ -34,7 +34,7 @@ jobs:
       - name: Set up environment
         uses: ./.github/actions/setup-environment
         with:
-          uv_version: "0.6.1"
+          uv_version: "0.8.8"
           python_version_file: ".python-version"
 
       - name: Build the application
@@ -64,7 +64,7 @@ jobs:
       - name: Set up environment
         uses: ./.github/actions/setup-environment
         with:
-          uv_version: "0.6.1"
+          uv_version: "0.8.8"
           python_version_file: ".python-version"
 
       - name: Set solution environment variable
