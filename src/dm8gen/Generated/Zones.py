@@ -24,13 +24,26 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class Type(Enum):
     ZONE = 'zone'
+
+
+class Model(BaseModel):
+    model_config = ConfigDict(extra='allow', populate_by_name=True)
+    field_schema: Optional[str] = Field(None, alias='$schema')
+    type: Type
+
+    def to_dict(self) -> dict:
+        return self.model_dump(by_alias=True, exclude_unset=True, mode='json')
+
+    @staticmethod
+    def from_dict(obj) -> 'Model':
+        return Model.model_validate(obj, from_attributes=False)
 
 
 class Zone(BaseModel):
@@ -52,17 +65,3 @@ class Zone(BaseModel):
     @staticmethod
     def from_dict(obj) -> 'Zone':
         return Zone.model_validate(obj, from_attributes=False)
-
-
-class Model(BaseModel):
-    model_config = ConfigDict(extra='allow', populate_by_name=True)
-    field_schema: Optional[str] = Field(None, alias='$schema')
-    type: Type
-    zones: List[Zone]
-
-    def to_dict(self) -> dict:
-        return self.model_dump(by_alias=True, exclude_unset=True, mode='json')
-
-    @staticmethod
-    def from_dict(obj) -> 'Model':
-        return Model.model_validate(obj, from_attributes=False)
