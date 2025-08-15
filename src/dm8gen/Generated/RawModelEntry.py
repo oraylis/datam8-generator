@@ -61,6 +61,7 @@ class Attribute(BaseModel):
     tags: Optional[List[str]] = None
     dateModified: Optional[str] = None
     dateDeleted: Optional[str] = None
+    dateAdded: Optional[str] = None
 
     def to_dict(self) -> dict:
         return self.model_dump(by_alias=True, exclude_unset=True, mode='json')

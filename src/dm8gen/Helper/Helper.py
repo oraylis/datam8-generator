@@ -1,10 +1,12 @@
+import hashlib
+import json
 import logging
 import os
-import json
-import hashlib
+import shutil
 import textwrap
-from uuid import UUID
 from pathlib import Path
+from uuid import UUID
+
 from jsonschema import validate
 
 
@@ -102,7 +104,7 @@ class Helper:
             # Remove Old Log file
             if os.path.exists(log_path):
                 os.remove(log_path)
-            
+
             formatter = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s: %(message)s"
             )
@@ -153,7 +155,9 @@ class ColorFormatter(logging.Formatter):
     }
 
     def format(self, record):
-        record.levelname = "WARN" if record.levelname == "WARNING" else record.levelname
+        record.levelname = (
+            "WARN" if record.levelname == "WARNING" else record.levelname
+        )
         record.levelname = (
             "ERROR" if record.levelname == "CRITICAL" else record.levelname
         )
@@ -267,3 +271,10 @@ class JsonFileParseException(Exception):
                 "type": type(self.inner_exception),
             }
         )
+
+
+def copy_static_files(src: str, dest: str):
+    static_files_src = Path(src)
+    static_files_dest = Path(dest)
+
+    shutil.copytree(static_files_src, static_files_dest, dirs_exist_ok=True)
