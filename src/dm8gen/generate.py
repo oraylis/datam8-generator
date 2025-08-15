@@ -5,7 +5,7 @@ import typer
 from .Factory.Jinja2Factory import Jinja2Factory
 from .Factory.Model import Model
 from .Generated.Solution import Model as Solution
-from .Helper.Helper import Helper
+from .Helper.Helper import Helper, copy_static_files
 import logging
 
 logger = logging.getLogger(__name__)
@@ -82,6 +82,14 @@ def generate(
             help="Directory path to Jinja2 collections (templates for blocks and includes).",
         ),
     ] = None,
+    path_static_files: Annotated[
+        Optional[str],
+        typer.Option(
+            "--path-static-files",
+            "-S",
+            help="Directory path containing static files that simple get copied into the output.",
+        ),
+    ] = None,
     log_level: Annotated[
         str,
         typer.Option(
@@ -115,7 +123,7 @@ def generate(
         logger.warning(f"Invalid log level: {log_level} defaulting to INFO")
     else:
         log_level_int = getattr(logging, log_level_upper)
-        Helper.start_logger("main", log_level=log_level_int)
+        logger = Helper.start_logger("main", log_level=log_level_int)
 
     # Validate the provided solution file
     solution_data = Helper.read_json(path_solution)
@@ -146,6 +154,21 @@ def generate(
         GenerateOptionEnum.GENERATE_TEMPLATE,
         GenerateOptionEnum.REFRESH_GENERATE,
     }:
+        if (
+            path_template_source is None
+            or path_template_destination is None
+            or path_modules is None
+            or path_collections is None
+        ):
+            raise Exception(
+                "Mandatory parameters for generating templates are missing:\n"
+                "--------------------------\n"
+                "--path-template-source\n"
+                "--path-template-destination\n"
+                "--path-modules\n"
+                "--path-collections\n"
+            )
+
         # Perform initial checks based on action type
         model.perform_initial_checks(
             "raw",
@@ -169,3 +192,10 @@ def generate(
             path_collections=path_collections,
             path_solution=path_solution,
         )
+
+        if path_static_files:
+            logger.info(
+                "Copying static files from (%s) to (%s)"
+                % (path_static_files, path_template_destination)
+            )
+            copy_static_files(path_static_files, path_template_destination)
