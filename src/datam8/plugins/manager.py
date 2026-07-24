@@ -140,9 +140,7 @@ class PluginManager:
         """
         Load plugins from a solution's plugin directory into this PluginManager.
         """
-        plugins_path = config.solution_folder_path / (
-            solution.pluginsPath or Path("Plugins")
-        )
+        plugins_path = config.solution_folder_path / solution.pluginsPath
         self.__plugins_dir_path = plugins_path
 
         logger.debug("Plugins directory: %s", plugins_path.as_posix())
