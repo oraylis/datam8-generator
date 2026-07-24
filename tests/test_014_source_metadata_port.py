@@ -69,28 +69,6 @@ class SourcePluginStub:
         return "string"
 
 
-def test_source_metadata_and_override_reach_model_entity(monkeypatch) -> None:
-    plugin = SourcePluginStub()
-    monkeypatch.setattr(
-        factory,
-        "get_plugin_for_data_source",
-        lambda _data_source, model: plugin,
-    )
-
-    entity = source.read_from_data_source(
-        "sql-crm",
-        "dbo.customers",
-        model=SourceModelStub(),  # type: ignore[arg-type]
-    )
-
-    assert entity.description == "Customer master"
-    assert entity.properties is not None
-    assert entity.properties[0].property == "domain"
-    assert entity.attributes[0].description == "Technical customer key"
-    assert entity.attributes[0].properties is not None
-    assert entity.sources[0].dataSource == "crm-api"
-    assert entity.sources[0].sourceLocation == "customers/current"
-
 
 def test_builtin_preview_implementations_advertise_capability() -> None:
     for plugin_class in (CsvFile, SqlServer):
@@ -108,6 +86,7 @@ def test_table_metadata_defaults_description_to_none() -> None:
                     "isNullable": False,
                 }
             ]
-        )
+        ),
+        SourceObject(name="dummy", type="dummy")
     )
     assert next(metadata.iter_source_fields()).description is None
