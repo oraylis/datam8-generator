@@ -65,13 +65,6 @@ All non-readiness logs are written to stderr.
 - Built-in plugin IDs use the canonical `builtin:*` form, for example `builtin:SQLServer`.
 - `PUT /secrets/set` is an upsert and returns `204 No Content`.
 - Canonical source navigation remains under `/sources/{dataSource}/locations`.
-- Schema/table compatibility adapters:
-  - `GET /sources/{dataSource}/schemas`
-  - `GET /sources/{dataSource}/schemas/{schema}/tables`
-  - `GET /sources/{dataSource}/schemas/{schema}/tables/{table}`
-  - `GET /sources/{dataSource}/schemas/{schema}/tables/{table}/preview`
-  - `PUT /sources/{dataSource}/schemas/{schema}/tables/{table}/import`
-  - Equivalent schema-less routes are available under `/sources/{dataSource}/tables`.
 - Source metadata may include `description`, `properties`, and `sourceOverride`.
 - Preview endpoints require the plugin capability `previewData`.
 
