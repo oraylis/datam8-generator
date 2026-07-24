@@ -25,6 +25,7 @@ from datam8 import factory, source
 from datam8.model import EntityWrapper, Locator
 from datam8_model.data_source import SourceField
 from datam8_model.model import ExternalModelSource, ModelEntity
+from datam8_model.plugin import Capability
 
 from .responses import MultiItemResponse
 
@@ -41,7 +42,7 @@ async def test_connection(data_source: str) -> None:
 
 
 @sources_router.get("/{data_source}/locations")
-async def list_tables(
+async def list_locations(
     data_source: str, source_location: str | None = None
 ) -> MultiItemResponse[dict[str, Any]]:
     "List available source tables if a source does not support schemas"
@@ -65,6 +66,8 @@ async def preview(
     data_source: str, source_location: str, limit: int = 10
 ) -> MultiItemResponse[dict[str, Any]]:
     plugin = factory.get_plugin_for_data_source(data_source)
+    if not plugin.is_capable_of(Capability.PREVIEW_DATA):
+        raise HTTPException(status_code=400, detail="Plugin does not support data preview")
     preview = plugin.preview_data(source_location, limit=limit)
 
     for df in preview.collect_batches(chunk_size=limit):
