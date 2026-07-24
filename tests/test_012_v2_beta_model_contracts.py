@@ -89,6 +89,7 @@ def test_rename_base_entity_replaces_original_json_entry(tmp_path: Path) -> None
         schemaVersion="2.0.0",
         modelPath=Path("Model"),
         basePath=Path("Base"),
+        pluginsPath=Path("Plugins"),
         generatorTargets=[
             s.GeneratorTarget(
                 name="test",
