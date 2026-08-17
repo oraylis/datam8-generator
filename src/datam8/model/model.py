@@ -37,6 +37,7 @@ from datam8_model import property as p
 from datam8_model import solution as s
 from datam8_model import zone as z
 
+from . import entity_wrapper as ew
 from .entity_wrapper import EntityRepository, EntityWrapper, EntityWrapperVariant
 from .locator import ROOT_LOCATOR, Locator, LocatorOrString, _ensure_locator
 
@@ -224,20 +225,11 @@ class Model:
         if len(property_references) > 0:
             self._resolve_properties(wrapper, property_references)
 
-        self._resolve_model_attributes(wrapper)
         wrapper.resolved = True
 
         logger.info("Resolved %s", str(wrapper.locator))
 
         return wrapper
-
-    def _resolve_model_attributes[T: b.BaseEntityType](self, wrapper: EntityWrapper[T], /) -> None:
-        if not isinstance(wrapper.entity, m.ModelEntity):
-            return
-
-        for attr in wrapper.entity.attributes:
-            pass
-            # logger.error(attr.properties)
 
     def resolve(self) -> None:
         "Resolve all entities by iterating over them."
@@ -510,8 +502,17 @@ class Model:
 
     def delete_entities(self, locator: Locator | str, /) -> list[Locator]:
         search_locator = _ensure_locator(locator)
-        repo = self[search_locator.entityType]
-        to_delete = [w.locator for w in repo.get_many_where(lambda w: w.locator in search_locator)]
+        to_delete = [
+            w.locator
+            for w in self[search_locator.entityType].get_many_where(ew.locator_in(search_locator))
+        ]
+
+        # also remove folders
+        folder_search_locator = search_locator.clone_as(b.EntityType.FOLDERS)
+        to_delete.extend(
+            wrapper.locator
+            for wrapper in self.folders.get_many_where(ew.locator_in(folder_search_locator))
+        )
 
         if len(to_delete) == 0:
             raise utils.create_error(errors.InvalidLocatorError(str(locator)))
@@ -562,7 +563,7 @@ class Model:
                             wrapper.locator, build_new_locator(wrapper.locator), force=force
                         )
                         for wrapper in self[from_locator.entityType].get_many_where(
-                            lambda w: w.locator in from_locator
+                            ew.locator_in(from_locator)
                         )
                     ]
 
@@ -579,7 +580,7 @@ class Model:
                             force=force,
                         )
                         for wrapper in self.folders.get_many_where(
-                            lambda w: w.locator in folder_search_locator
+                            ew.locator_in(folder_search_locator)
                         )
                     ]
 
@@ -994,24 +995,42 @@ class EntityFileRef:
             case _:
                 current_content = b.BaseEntities.from_json_file(self.file_path)
                 entities: list[b.BaseEntityType] = getattr(current_content.root, self._type.value)
+                deleted_wrappers = [
+                    w
+                    for w in wrappers
+                    # in case the wrapper was just renamed, dont remove it, so the change can overwrite
+                    # the old value
+                    if w.locator not in self.renamed_locators
+                ]
 
-                # remove all entities whose name are not part of the to be delete wrapper list
+                # remove all entities whose locator is part of the to-be-deleted wrapper list
                 # do the same for locators and store them in the file reference object
-                entities = [
-                    e
-                    for e in entities
-                    if e.name
-                    not in [
-                        w.entity.name
-                        for w in wrappers
-                        # in case the wrapper was just renamed, dont remove it, so the change can overwrite
-                        # the old value
-                        if w.locator not in self.renamed_locators
+                if self._type == b.EntityType.PROPERTY_VALUES:
+                    # to compare property values the name is not enough for a comparison
+                    # both the name (value) and the property is necessary
+                    print(type(wrappers))
+                    entities_to_remove = [
+                        (w.entity.property, w.locator.entityName)
+                        for w in deleted_wrappers
+                        if isinstance(w.entity, p.PropertyValue)
                     ]
-                ]
-                self.locators = [
-                    loc for loc in self.locators if loc not in [w.locator for w in wrappers]
-                ]
+                    entities = [
+                        e
+                        for e in entities
+                        if isinstance(e, p.PropertyValue)
+                        and (e.property, e.name) not in entities_to_remove
+                    ]
+                    self.locators = [
+                        loc
+                        for loc in self.locators
+                        if (loc.folders[-1], loc.entityName) not in entities_to_remove
+                    ]
+                else:
+                    entities_to_remove = [w.locator.entityName for w in deleted_wrappers]
+                    entities = [e for e in entities if e.name not in entities_to_remove]
+                    self.locators = [
+                        loc for loc in self.locators if loc not in [w.locator for w in wrappers]
+                    ]
 
                 # NOTE: this should actually never not be case, if not then something went majorly
                 # wrong

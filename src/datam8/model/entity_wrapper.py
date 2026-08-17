@@ -19,7 +19,7 @@
 from __future__ import annotations
 
 import inspect
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Iterable
 from pathlib import Path
 from threading import Lock
 from typing import Any, Protocol
@@ -117,6 +117,32 @@ def _update_properties(
     return has_changed
 
 
+def locator_in[T: b.BaseEntityType](
+    iter: Iterable[Locator] | Locator,
+) -> Callable[[EntityWrapper[T]], bool]:
+    def inner(wrapper: EntityWrapper[T]) -> bool:
+        return wrapper.locator in iter
+
+    return inner
+
+
+def id_equals[T: b.BaseEntityType](id: int) -> Callable[[EntityWrapper[T]], bool]:
+    def filter_on_id(wrapper: EntityWrapper[T]):
+        assert hasattr(wrapper.entity, "id"), (
+            f"EntityType '{wrapper.locator.entityType}' does not provide an id"
+        )
+        return wrapper.entity.id == id
+
+    return filter_on_id
+
+
+def name_equals[T: b.BaseEntityType](name: str) -> Callable[[EntityWrapper[T]], bool]:
+    def filter_on_name(wrapper: EntityWrapper[T]) -> bool:
+        return wrapper.entity.name == name
+
+    return filter_on_name
+
+
 class EntityRepository[T: b.BaseEntityType]:
     """
     `EntityRepository`
@@ -212,20 +238,13 @@ class EntityRepository[T: b.BaseEntityType]:
 
     def get_by_id(self, id: int, /) -> EntityWrapper[T]:
         try:
-
-            def filter_on_id(wrapper: EntityWrapper[T]):
-                assert hasattr(wrapper.entity, "id"), (
-                    f"EntityType '{wrapper.locator.entityType}' does not provide an id"
-                )
-                return wrapper.entity.id == id
-
-            return self.get_where(filter_on_id)
+            return self.get_where(id_equals(id))
         except Exception as err:
             raise utils.create_error(f"No entity found for id: '{id}'") from err
 
     def get_by_name(self, name: str, /) -> EntityWrapper[T]:
         try:
-            return self.get_where(lambda w: w.entity.name == name)
+            return self.get_where(name_equals(name))
         except Exception as err:
             raise utils.create_error(f"No entity found for name: '{name}'") from err
 
@@ -247,7 +266,7 @@ class EntityRepository[T: b.BaseEntityType]:
 
     def get_many(self, locator: LocatorOrString, /) -> list[EntityWrapper[T]]:
         locator_ = self.__ensure_locator(locator)
-        return self.get_many_where(lambda w: w.locator in locator_)
+        return self.get_many_where(locator_in(locator_))
 
     def get_all(self, /) -> list[EntityWrapper[T]]:
         return list(self.values())

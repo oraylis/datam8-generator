@@ -276,7 +276,7 @@ class SqlServer(Plugin):
             ),
             properties=(
                 # pl.lit([{"property": "test", "value": "testtest"}])
-                pl.lit(None),
+                pl.lit(None)
             ),
         )
         if result.is_empty():

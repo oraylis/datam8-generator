@@ -12,7 +12,6 @@ from types import SimpleNamespace
 
 import polars as pl
 
-from datam8 import factory, source
 from datam8.plugins.base import TableMetadata
 from datam8.plugins.builtins.file import CsvFile
 from datam8.plugins.builtins.sql_server import SqlServer
@@ -47,9 +46,7 @@ class SourcePluginStub:
                     "isNullable": False,
                     "isPrimaryKey": True,
                     "description": "Technical customer key",
-                    "properties": [
-                        {"property": "classification", "value": "restricted"}
-                    ],
+                    "properties": [{"property": "classification", "value": "restricted"}],
                 }
             ]
         )
@@ -69,7 +66,6 @@ class SourcePluginStub:
         return "string"
 
 
-
 def test_builtin_preview_implementations_advertise_capability() -> None:
     for plugin_class in (CsvFile, SqlServer):
         assert Capability.PREVIEW_DATA in plugin_class.manifest().capabilities
@@ -87,6 +83,6 @@ def test_table_metadata_defaults_description_to_none() -> None:
                 }
             ]
         ),
-        SourceObject(name="dummy", type="dummy")
+        SourceObject(name="dummy", type="dummy"),
     )
     assert next(metadata.iter_source_fields()).description is None
