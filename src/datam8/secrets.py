@@ -24,7 +24,7 @@ from pathlib import PurePosixPath
 from threading import Lock
 
 import keyring
-from keyring.backends.fail import KeyringBackend as FailedKeyringBackend
+from keyring.backends.fail import Keyring as FailedKeyring
 from keyring.errors import NoKeyringError
 
 from datam8 import config, logging, utils
@@ -78,7 +78,7 @@ class SecretResolver:
 
         # test if a viable backend is available
         backend = keyring.get_keyring()
-        if isinstance(backend, FailedKeyringBackend):
+        if isinstance(backend, FailedKeyring):
             raise utils.create_error(
                 NoKeyringError(
                     "No available secret backend available. "
